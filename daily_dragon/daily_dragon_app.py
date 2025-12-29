@@ -1,11 +1,10 @@
 import logging
 from typing import Optional
-from urllib.request import Request
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, Depends, HTTPException, Response, Query
-from starlette.middleware.base import BaseHTTPMiddleware
 from pydantic import BaseModel
+from starlette.middleware.cors import CORSMiddleware
 
 from daily_dragon.auth.cognito import cognito_auth, DailyDragonCognitoToken
 from daily_dragon.exceptions import WordAlreadyExistsError
@@ -21,32 +20,16 @@ load_dotenv()
 
 app = FastAPI()
 
-ALLOWED_ORIGINS = [
-    "http://localhost:5173",
-    "https://d36kc4lmm7sv5n.cloudfront.net"
-]
-
-
-class DynamicCORSMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next):
-        origin = request.headers.get("origin")
-        headers = {}
-        if origin in ALLOWED_ORIGINS:
-            headers = {
-                "Access-Control-Allow-Origin": origin,
-                "Access-Control-Allow-Credentials": "true",
-                "Access-Control-Allow-Methods": "GET,POST,OPTIONS,DELETE",
-                "Access-Control-Allow-Headers": "Authorization,Content-Type",
-            }
-
-        if request.method == "OPTIONS":
-            return Response(status_code=200, headers=headers)
-
-        response = await call_next(request)
-        response.headers.update(headers)
-        return response
-
-app.add_middleware(DynamicCORSMiddleware)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "https://d36kc4lmm7sv5n.cloudfront.net",
+        "http://localhost:5173",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 class WordEntry(BaseModel):
