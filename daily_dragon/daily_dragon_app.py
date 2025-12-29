@@ -1,9 +1,10 @@
 import logging
 from typing import Optional
+from urllib.request import Request
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, Depends, HTTPException, Response, Query
-from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
 from pydantic import BaseModel
 
 from daily_dragon.auth.cognito import cognito_auth, DailyDragonCognitoToken
@@ -20,16 +21,27 @@ load_dotenv()
 
 app = FastAPI()
 
-app.add_middleware(CORSMiddleware,
-                   allow_origins=[
-                       "http://localhost:5173",
-                       "https://d36kc4lmm7sv5n.cloudfront.net",
-                       "https://d36kc4lmm7sv5n.cloudfront.net/"
-                   ],
-                   allow_credentials=True,
-                   allow_methods=["GET", "POST", "OPTIONS"],
-                   allow_headers=["Authorization", "Content-Type"]
-                   )
+ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "https://d36kc4lmm7sv5n.cloudfront.net"
+]
+
+
+class DynamicCORSMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        origin = request.headers.get("origin")
+        response = await call_next(request)
+        if origin in ALLOWED_ORIGINS:
+            response.headers["Access-Control-Allow-Origin"] = origin
+            response.headers["Access-Control-Allow-Credentials"] = "true"
+            response.headers["Access-Control-Allow-Methods"] = "GET,POST,OPTIONS,DELETE"
+            response.headers["Access-Control-Allow-Headers"] = "Authorization,Content-Type"
+        if request.method == "OPTIONS":
+            return Response(status_code=200, headers=response.headers)
+        return response
+
+
+app.add_middleware(DynamicCORSMiddleware)
 
 
 class WordEntry(BaseModel):
