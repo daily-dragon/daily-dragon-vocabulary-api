@@ -30,16 +30,21 @@ ALLOWED_ORIGINS = [
 class DynamicCORSMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         origin = request.headers.get("origin")
-        response = await call_next(request)
+        headers = {}
         if origin in ALLOWED_ORIGINS:
-            response.headers["Access-Control-Allow-Origin"] = origin
-            response.headers["Access-Control-Allow-Credentials"] = "true"
-            response.headers["Access-Control-Allow-Methods"] = "GET,POST,OPTIONS,DELETE"
-            response.headers["Access-Control-Allow-Headers"] = "Authorization,Content-Type"
-        if request.method == "OPTIONS":
-            return Response(status_code=200, headers=response.headers)
-        return response
+            headers = {
+                "Access-Control-Allow-Origin": origin,
+                "Access-Control-Allow-Credentials": "true",
+                "Access-Control-Allow-Methods": "GET,POST,OPTIONS,DELETE",
+                "Access-Control-Allow-Headers": "Authorization,Content-Type",
+            }
 
+        if request.method == "OPTIONS":
+            return Response(status_code=200, headers=headers)
+
+        response = await call_next(request)
+        response.headers.update(headers)
+        return response
 
 app.add_middleware(DynamicCORSMiddleware)
 
