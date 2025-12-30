@@ -24,7 +24,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "https://d36kc4lmm7sv5n.cloudfront.net",
-        "http://localhost:5173",
+        "https://daily-dragon.havryliuk.com",
+        "http://localhost:5173"
     ],
     allow_credentials=True,
     allow_methods=["*"],
