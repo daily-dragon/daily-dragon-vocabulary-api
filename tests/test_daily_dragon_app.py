@@ -8,7 +8,7 @@ def test_add_word_success(test_client, mock_service):
 
     assert response.status_code == 201
     assert response.json() == {"message": "Word 测试 added to vocabulary"}
-    mock_service.add_word.assert_called_once_with("测试")
+    mock_service.add_word.assert_called_once_with("test-sub", "测试")
 
 
 def test_add_word_already_exists(test_client, mock_service):
@@ -37,4 +37,4 @@ def test_delete_word(test_client, mock_service):
     response = test_client.delete("daily-dragon/vocabulary/你好")
 
     assert response.status_code == 200
-    mock_service.delete_word.assert_called_once_with("你好")
+    mock_service.delete_word.assert_called_once_with("test-sub", "你好")
