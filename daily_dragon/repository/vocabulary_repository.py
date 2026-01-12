@@ -33,7 +33,7 @@ class VocabularyRepository:
                 raise
 
     def save_vocabulary(self, user_id: str, vocabulary: Dict[str, Dict]):
-        key = f"{user_id}_vocabulary.json"
+        key = self._create_key(user_id)
         self.s3_client.put_object(
             Bucket=self.bucket_name,
             Key=key,
