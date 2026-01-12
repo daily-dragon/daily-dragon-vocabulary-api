@@ -42,7 +42,8 @@ def add_word(word_entry: WordEntry, vocabulary_service: VocabularyService = Depe
              auth: DailyDragonCognitoToken = Depends(cognito_auth.auth_required)):
     word = word_entry.word
     try:
-        vocabulary_service.add_word(word_entry.word)
+        user_id = auth.sub
+        vocabulary_service.add_word(user_id, word_entry.word)
         return {"message": f"Word {word} added to vocabulary"}
     except WordAlreadyExistsError:
         raise HTTPException(status_code=409, detail=f"Word {word} already exists")
@@ -51,17 +52,19 @@ def add_word(word_entry: WordEntry, vocabulary_service: VocabularyService = Depe
 @app.get("/daily-dragon/vocabulary")
 def get_vocabulary(vocabulary_service: VocabularyService = Depends(), count: Optional[int] = Query(None, gt=0),
                    auth: DailyDragonCognitoToken = Depends(cognito_auth.auth_required)):
+    user_id = auth.sub
     if count is not None:
-        vocabulary = vocabulary_service.get_random_vocabulary(count)
+        vocabulary = vocabulary_service.get_random_vocabulary(user_id, count)
     else:
-        vocabulary = vocabulary_service.get_vocabulary()
+        vocabulary = vocabulary_service.get_vocabulary(user_id)
     return vocabulary
 
 
 @app.delete("/daily-dragon/vocabulary/{word}")
 def delete_word(word: str, vocabulary_service: VocabularyService = Depends(),
                 auth: DailyDragonCognitoToken = Depends(cognito_auth.auth_required)):
-    vocabulary_service.delete_word(word)
+    user_id = auth.sub
+    vocabulary_service.delete_word(user_id, word)
     return {"message": f"Word {word} deleted"}
 
 
