@@ -1,16 +1,16 @@
 ### Get all words
-GET https://c0ouez95i5.execute-api.us-west-2.amazonaws.com/daily-dragon/vocabulary
+GET https://0xok06khai.execute-api.us-west-2.amazonaws.com/dev/daily-dragon/vocabulary
 Authorization: Bearer <token>
 
 ### Get n random words
-GET https://c0ouez95i5.execute-api.us-west-2.amazonaws.com/daily-dragon/vocabulary?count=5
+GET https://0xok06khai.execute-api.us-west-2.amazonaws.com/daily-dragon/vocabulary?count=5
 Authorization: Bearer <token>
 
 ###
-OPTIONS http://c0ouez95i5.execute-api.us-west-2.amazonaws.com/daily-dragon/vocabulary
+OPTIONS http://0xok06khai.execute-api.us-west-2.amazonaws.com/daily-dragon/vocabulary
 
 ### Add a new word
-POST https://c0ouez95i5.execute-api.us-west-2.amazonaws.com/daily-dragon/vocabulary
+POST https://0xok06khai.execute-api.us-west-2.amazonaws.com/daily-dragon/vocabulary
 Authorization: Bearer <token>
 
 {
@@ -18,5 +18,5 @@ Authorization: Bearer <token>
 }
 
 ### Delete a word
-DELETE https://c0ouez95i5.execute-api.us-west-2.amazonaws.com/daily-dragon/vocabulary/%E4%BD%A0%E5%A5%BD
+DELETE https://0xok06khai.execute-api.us-west-2.amazonaws.com/daily-dragon/vocabulary/%E4%BD%A0%E5%A5%BD
 Authorization: Bearer <token>
