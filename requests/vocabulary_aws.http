@@ -20,3 +20,21 @@ Authorization: Bearer <token>
 ### Delete a word
 DELETE https://0xok06khai.execute-api.us-west-2.amazonaws.com/daily-dragon/vocabulary/%E4%BD%A0%E5%A5%BD
 Authorization: Bearer <token>
+
+### Get due words for review (spaced repetition)
+GET https://0xok06khai.execute-api.us-west-2.amazonaws.com/daily-dragon/vocabulary/due
+Authorization: Bearer <token>
+
+### Submit batch reviews with quality ratings (spaced repetition)
+# Quality ratings: 0 (blackout) to 5 (perfect recall)
+POST https://0xok06khai.execute-api.us-west-2.amazonaws.com/daily-dragon/vocabulary/reviews
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "reviews": [
+    {"word": "你好", "quality": 5},
+    {"word": "学习", "quality": 4},
+    {"word": "中文", "quality": 3}
+  ]
+}

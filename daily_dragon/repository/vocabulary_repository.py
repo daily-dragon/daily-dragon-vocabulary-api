@@ -2,12 +2,13 @@ import json
 import logging
 import os
 import time
-from typing import Dict
+from typing import Dict, List
 
 import boto3
 from botocore.exceptions import ClientError
 
 from daily_dragon.exceptions import WordAlreadyExistsError
+from daily_dragon.service.spaced_repetition import SpacedRepetitionService
 
 logger = logging.getLogger(__name__)
 
@@ -18,6 +19,7 @@ class VocabularyRepository:
     def __init__(self):
         self.s3_client = boto3.client('s3')
         self.bucket_name = os.getenv("S3_BUCKET")
+        self.spaced_repetition_service = SpacedRepetitionService()
 
     def get_vocabulary(self, user_id: str) -> Dict[str, Dict]:
         try:
@@ -40,6 +42,70 @@ class VocabularyRepository:
             Body=json.dumps(vocabulary, ensure_ascii=False).encode('utf-8')
         )
 
+    def ensure_spaced_repetition_fields(self, word_metadata: Dict) -> Dict:
+        """
+        Ensure word has all spaced repetition fields (lazy migration).
+        Removes adoption field if present and adds missing SM-2 fields.
+
+        Args:
+            word_metadata: Current word metadata dict
+
+        Returns:
+            Updated word metadata with SM-2 fields
+        """
+        # Remove adoption field if present (old data cleanup)
+        if 'adoption' in word_metadata:
+            del word_metadata['adoption']
+
+        # Add missing SM-2 fields with defaults
+        if 'interval' not in word_metadata:
+            word_metadata['interval'] = SpacedRepetitionService.INITIAL_INTERVAL
+        if 'repetition' not in word_metadata:
+            word_metadata['repetition'] = SpacedRepetitionService.INITIAL_REPETITION
+        if 'ease_factor' not in word_metadata:
+            word_metadata['ease_factor'] = SpacedRepetitionService.INITIAL_EASE_FACTOR
+        if 'next_review_date' not in word_metadata:
+            word_metadata['next_review_date'] = None
+        if 'last_review_date' not in word_metadata:
+            word_metadata['last_review_date'] = None
+
+        return word_metadata
+
+    def get_due_words(self, user_id: str, limit: int = 5) -> List[Dict]:
+        """
+        Get words that are due for review, sorted by most overdue first.
+
+        Args:
+            user_id: User ID
+            limit: Maximum number of words to return (default 5)
+
+        Returns:
+            List of dicts with 'word' and 'metadata' (including days_overdue)
+        """
+        vocabulary = self.get_vocabulary(user_id)
+
+        # Apply migration to all words
+        for word, metadata in vocabulary.items():
+            vocabulary[word] = self.ensure_spaced_repetition_fields(metadata)
+
+        current_time = int(time.time())
+
+        # Filter due words and calculate days overdue
+        due_words = []
+        for word, metadata in vocabulary.items():
+            if self.spaced_repetition_service.is_due(metadata, current_time):
+                days = self.spaced_repetition_service.days_overdue(metadata, current_time)
+                due_words.append({
+                    'word': word,
+                    'metadata': {**metadata, 'days_overdue': days}
+                })
+
+        # Sort by days_overdue descending (most overdue first)
+        due_words.sort(key=lambda x: x['metadata']['days_overdue'], reverse=True)
+
+        # Return top N words
+        return due_words[:limit]
+
     def add_word(self, user_id: str, word: str) -> None:
         vocabulary = self.get_vocabulary(user_id)
 
@@ -47,10 +113,8 @@ class VocabularyRepository:
             logger.info("Word already exists in vocabulary: %s", word)
             raise WordAlreadyExistsError()
 
-        word_details = {
-            'adoption': 0,
-            'created_on': int(time.time())
-        }
+        created_on = int(time.time())
+        word_details = self.spaced_repetition_service.initialize_word_metadata(created_on)
 
         vocabulary[word] = word_details
 
