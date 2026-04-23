@@ -84,8 +84,8 @@ def test_submit_reviews_all_valid(test_client, mock_service):
 
     response = test_client.post("daily-dragon/vocabulary/reviews", json={
         "reviews": [
-            {"word": "word1", "quality": 5},
-            {"word": "word2", "quality": 4}
+            {"word": "word1", "quality": 10},
+            {"word": "word2", "quality": 8}
         ]
     })
 
@@ -101,7 +101,7 @@ def test_submit_reviews_invalid_quality(test_client, mock_service):
     """Test POST /vocabulary/reviews with invalid quality rating."""
     response = test_client.post("daily-dragon/vocabulary/reviews", json={
         "reviews": [
-            {"word": "word1", "quality": 6}  # Invalid quality
+            {"word": "word1", "quality": 11}  # Invalid quality
         ]
     })
 
@@ -134,9 +134,9 @@ def test_submit_reviews_mixed_results(test_client, mock_service):
 
     response = test_client.post("daily-dragon/vocabulary/reviews", json={
         "reviews": [
-            {"word": "word1", "quality": 5},
-            {"word": "nonexistent", "quality": 4},
-            {"word": "word2", "quality": 5}
+            {"word": "word1", "quality": 10},
+            {"word": "nonexistent", "quality": 8},
+            {"word": "word2", "quality": 10}
         ]
     })
 
@@ -154,24 +154,24 @@ def test_submit_reviews_mixed_results(test_client, mock_service):
 
 
 def test_submit_reviews_all_quality_ratings(test_client, mock_service):
-    """Test POST /vocabulary/reviews with all valid quality ratings (0-5)."""
+    """Test POST /vocabulary/reviews with all valid quality ratings (0-10)."""
     mock_service.record_reviews.return_value = {
         'results': [
             {'word': f'word{i}', 'success': True, 'next_review_date': 123500 + i, 'interval': i}
-            for i in range(6)
+            for i in range(11)
         ],
-        'total_processed': 6,
-        'successful': 6,
+        'total_processed': 11,
+        'successful': 11,
         'failed': 0
     }
 
     response = test_client.post("daily-dragon/vocabulary/reviews", json={
         "reviews": [
             {"word": f"word{i}", "quality": i}
-            for i in range(6)
+            for i in range(11)
         ]
     })
 
     assert response.status_code == 200
     data = response.json()
-    assert data['successful'] == 6
+    assert data['successful'] == 11

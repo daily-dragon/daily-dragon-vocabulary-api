@@ -79,23 +79,25 @@ The API implements the SuperMemo-2 (SM-2) spaced repetition algorithm for optimi
 
 ### SM-2 Algorithm
 
-**Quality Ratings (0-5):**
-- 0: Complete blackout, didn't remember at all
-- 1: Incorrect, but word felt familiar
-- 2: Incorrect, but seemed easy to recall
-- 3: Correct with serious difficulty
-- 4: Correct after hesitation
-- 5: Perfect recall
+**Quality Ratings (0-10):**
+- 0-1: Complete blackout, didn't remember at all
+- 2-3: Incorrect, but word felt familiar
+- 4: Incorrect, but seemed easy to recall
+- 5: Correct with serious difficulty
+- 6-7: Correct with some difficulty
+- 8: Correct after hesitation
+- 9: Good recall
+- 10: Perfect recall
 
 **Interval Progression:**
-- Failed review (quality < 3): Reset to immediate review (interval = 0, repetition = 0)
+- Failed review (quality < 5): Reset to immediate review (interval = 0, repetition = 0)
 - First successful review: 1 day
 - Second successful review: 6 days
 - Subsequent reviews: previous_interval × ease_factor
 
 **Ease Factor:**
 - Starts at 2.5 for new words
-- Adjusted based on quality rating: `EF' = EF + (0.1 - (5 - q) * (0.08 + (5 - q) * 0.02))`
+- Adjusted based on quality rating: `EF' = EF + (0.1 - (10 - q) * (0.04 + (10 - q) * 0.005))`
 - Minimum value: 1.3
 
 ### Spaced Repetition Endpoints
@@ -107,7 +109,7 @@ The API implements the SuperMemo-2 (SM-2) spaced repetition algorithm for optimi
 
 **POST /daily-dragon/vocabulary/reviews**
 - Submit batch reviews for multiple words
-- Request body: `{"reviews": [{"word": "你好", "quality": 5}, ...]}`
+- Request body: `{"reviews": [{"word": "你好", "quality": 10}, ...]}`
 - Returns individual results for each word (success/failure)
 - Single S3 save for entire batch (efficient)
 

@@ -100,8 +100,8 @@ def test_record_reviews_all_valid(mock_repository):
 
     service = VocabularyService(vocabulary_repository=mock_repository)
     reviews = [
-        {'word': 'word1', 'quality': 5},
-        {'word': 'word2', 'quality': 4}
+        {'word': 'word1', 'quality': 10},
+        {'word': 'word2', 'quality': 8}
     ]
 
     result = service.record_reviews(user_id, reviews)
@@ -140,7 +140,7 @@ def test_record_reviews_word_not_found(mock_repository):
 
     service = VocabularyService(vocabulary_repository=mock_repository)
     reviews = [
-        {'word': 'nonexistent', 'quality': 5}
+        {'word': 'nonexistent', 'quality': 10}
     ]
 
     result = service.record_reviews(user_id, reviews)
@@ -180,9 +180,9 @@ def test_record_reviews_mixed_valid_invalid(mock_repository):
 
     service = VocabularyService(vocabulary_repository=mock_repository)
     reviews = [
-        {'word': 'word1', 'quality': 5},      # Valid
-        {'word': 'nonexistent', 'quality': 4}, # Word not found
-        {'word': 'word2', 'quality': 3}        # Valid
+        {'word': 'word1', 'quality': 10},      # Valid
+        {'word': 'nonexistent', 'quality': 8}, # Word not found
+        {'word': 'word2', 'quality': 6}        # Valid
     ]
 
     result = service.record_reviews(user_id, reviews)
@@ -201,9 +201,9 @@ def test_record_reviews_mixed_valid_invalid(mock_repository):
 
 
 def test_record_reviews_all_quality_ratings(mock_repository):
-    """Test record_reviews handles all valid quality ratings (0-5)."""
+    """Test record_reviews handles all valid quality ratings (0-10)."""
     vocab = {}
-    for i in range(6):
+    for i in range(11):
         vocab[f'word{i}'] = {
             'created_on': 123456,
             'interval': 0,
@@ -217,12 +217,12 @@ def test_record_reviews_all_quality_ratings(mock_repository):
     mock_repository.ensure_spaced_repetition_fields.side_effect = lambda x: x
 
     service = VocabularyService(vocabulary_repository=mock_repository)
-    reviews = [{'word': f'word{i}', 'quality': i} for i in range(6)]
+    reviews = [{'word': f'word{i}', 'quality': i} for i in range(11)]
 
     result = service.record_reviews(user_id, reviews)
 
-    assert result['total_processed'] == 6
-    assert result['successful'] == 6
+    assert result['total_processed'] == 11
+    assert result['successful'] == 11
     assert result['failed'] == 0
 
     # All should be successful
@@ -242,9 +242,9 @@ def test_record_reviews_single_save(mock_repository):
 
     service = VocabularyService(vocabulary_repository=mock_repository)
     reviews = [
-        {'word': 'word1', 'quality': 5},
-        {'word': 'word2', 'quality': 4},
-        {'word': 'word3', 'quality': 3}
+        {'word': 'word1', 'quality': 10},
+        {'word': 'word2', 'quality': 8},
+        {'word': 'word3', 'quality': 6}
     ]
 
     service.record_reviews(user_id, reviews)

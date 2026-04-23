@@ -40,7 +40,7 @@ class WordEntry(BaseModel):
 class Review(BaseModel):
     """A single word review with quality rating."""
     word: str
-    quality: int = Field(..., ge=0, le=5, description="Quality rating from 0 (complete blackout) to 5 (perfect recall)")
+    quality: int = Field(..., ge=0, le=10, description="Quality rating from 0 (complete blackout) to 10 (perfect recall)")
 
 
 class BatchReviewRequest(BaseModel):
@@ -103,13 +103,15 @@ def submit_reviews(request: BatchReviewRequest,
     Submit quality ratings for multiple words at once.
     Each review updates the word's spaced repetition schedule using the SM-2 algorithm.
 
-    Quality ratings (0-5):
-    - 0: Complete blackout
-    - 1: Incorrect, but word felt familiar
-    - 2: Incorrect, but seemed easy to recall
-    - 3: Correct with serious difficulty
-    - 4: Correct after hesitation
-    - 5: Perfect recall
+    Quality ratings (0-10):
+    - 0-1: Complete blackout
+    - 2-3: Incorrect, but word felt familiar
+    - 4: Incorrect, but seemed easy to recall
+    - 5: Correct with serious difficulty
+    - 6-7: Correct with some difficulty
+    - 8: Correct after hesitation
+    - 9: Good recall
+    - 10: Perfect recall
     """
     user_id = auth.sub
     reviews = [{'word': r.word, 'quality': r.quality} for r in request.reviews]

@@ -6,13 +6,15 @@ class SpacedRepetitionService:
     """
     Implements the SuperMemo-2 (SM-2) spaced repetition algorithm.
 
-    Quality ratings (0-5):
-    - 0: Complete blackout
-    - 1: Incorrect, but word felt familiar
-    - 2: Incorrect, but seemed easy to recall
-    - 3: Correct with serious difficulty
-    - 4: Correct after hesitation
-    - 5: Perfect recall
+    Quality ratings (0-10):
+    - 0-1: Complete blackout
+    - 2-3: Incorrect, but word felt familiar
+    - 4: Incorrect, but seemed easy to recall
+    - 5: Correct with serious difficulty
+    - 6-7: Correct with some difficulty
+    - 8: Correct after hesitation
+    - 9: Good recall
+    - 10: Perfect recall
 
     The SM-2 algorithm adjusts review intervals based on how well the user
     recalls each word, optimizing long-term retention.
@@ -29,17 +31,17 @@ class SpacedRepetitionService:
         Calculate next review date and updated metadata based on SM-2 algorithm.
 
         Algorithm:
-        - If quality < 3 (incorrect): repetition = 0, interval = 0
+        - If quality < 5 (incorrect): repetition = 0, interval = 0
         - If quality >= 3 (correct):
           - If repetition = 0: interval = 1 day
           - If repetition = 1: interval = 6 days
           - If repetition > 1: interval = previous_interval * ease_factor
-        - Update ease_factor: EF' = EF + (0.1 - (5 - q) * (0.08 + (5 - q) * 0.02))
+        - Update ease_factor: EF' = EF + (0.1 - (10 - q) * (0.04 + (10 - q) * 0.005))
         - Ease factor cannot go below 1.3
 
         Args:
             word_metadata: Current word metadata dict
-            quality: Quality rating from 0-5
+            quality: Quality rating from 0-10
 
         Returns:
             Dict with updated metadata fields (interval, repetition, ease_factor,
@@ -52,7 +54,7 @@ class SpacedRepetitionService:
         interval = word_metadata.get('interval', SpacedRepetitionService.INITIAL_INTERVAL)
 
         # Calculate interval based on quality (use current EF before updating it)
-        if quality < 3:
+        if quality < 5:
             # Failed review - restart
             repetition = 0
             interval = 0
@@ -67,7 +69,7 @@ class SpacedRepetitionService:
                 interval = int(interval * ease_factor)
 
         # Update ease factor after interval calculation (cannot go below MIN_EASE_FACTOR)
-        ease_factor = ease_factor + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02))
+        ease_factor = ease_factor + (0.1 - (10 - quality) * (0.04 + (10 - quality) * 0.005))
         ease_factor = max(ease_factor, SpacedRepetitionService.MIN_EASE_FACTOR)
 
         next_review_date = current_time + interval * 86400
