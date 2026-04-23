@@ -104,12 +104,12 @@ class VocabularyService:
                 })
                 successful += 1
 
-            except Exception as e:
-                logger.error(f"Error processing review for word {word}: {e}")
+            except Exception:
+                logger.exception(f"Error processing review for word {word}")
                 results.append({
                     'word': word,
                     'success': False,
-                    'error': str(e)
+                    'error': 'An internal error occurred while processing this review'
                 })
                 failed += 1
 
