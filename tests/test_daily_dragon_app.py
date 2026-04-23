@@ -57,7 +57,6 @@ def test_get_due_words(test_client, mock_service):
                 }
             }
         ],
-        'total_due': 1,
         'returned': 1
     }
 
@@ -66,7 +65,6 @@ def test_get_due_words(test_client, mock_service):
     assert response.status_code == 200
     data = response.json()
     assert 'due_words' in data
-    assert 'total_due' in data
     assert 'returned' in data
     assert len(data['due_words']) == 1
     mock_service.get_due_words.assert_called_once_with("test-sub")

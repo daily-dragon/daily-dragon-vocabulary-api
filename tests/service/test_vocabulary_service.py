@@ -11,8 +11,8 @@ user_id = "user_id"
 def mock_repository():
     mock = MagicMock()
     mock.get_vocabulary.return_value = {
-        "学习": {"adoption": 0, "date_added": "2025-04-08"},
-        "大众": {"adoption": 1, "date_added": "2025-04-01"},
+        "学习": {"created_on": 1712534400, "interval": 0, "repetition": 0, "ease_factor": 2.5, "next_review_date": None, "last_review_date": None},
+        "大众": {"created_on": 1711929600, "interval": 6, "repetition": 2, "ease_factor": 2.6, "next_review_date": 1712534400, "last_review_date": 1711929600},
     }
     return mock
 
@@ -36,7 +36,7 @@ def test_delete_word_exists(mock_repository):
     service.delete_word(user_id, "大众")
 
     updated_vocab = {
-        "学习": {"adoption": 0, "date_added": "2025-04-08"},
+        "学习": {"created_on": 1712534400, "interval": 0, "repetition": 0, "ease_factor": 2.5, "next_review_date": None, "last_review_date": None},
     }
     mock_repository.save_vocabulary.assert_called_once_with(user_id, updated_vocab)
 
@@ -72,7 +72,6 @@ def test_get_due_words(mock_repository):
 
     mock_repository.get_due_words.assert_called_once_with(user_id, limit=5)
     assert result['due_words'] == due_words_data
-    assert result['total_due'] == 1
     assert result['returned'] == 1
 
 
@@ -122,41 +121,6 @@ def test_record_reviews_all_valid(mock_repository):
     # Verify save was called once
     mock_repository.save_vocabulary.assert_called_once()
 
-
-def test_record_reviews_invalid_quality(mock_repository):
-    """Test record_reviews with invalid quality ratings."""
-    vocab = {
-        'word1': {
-            'created_on': 123456,
-            'interval': 0,
-            'repetition': 0,
-            'ease_factor': 2.5,
-            'next_review_date': None,
-            'last_review_date': None
-        }
-    }
-    mock_repository.get_vocabulary.return_value = vocab
-    mock_repository.ensure_spaced_repetition_fields.side_effect = lambda x: x
-
-    service = VocabularyService(vocabulary_repository=mock_repository)
-    reviews = [
-        {'word': 'word1', 'quality': 6},  # Too high
-        {'word': 'word1', 'quality': -1},  # Too low
-        {'word': 'word1', 'quality': 'invalid'}  # Wrong type
-    ]
-
-    result = service.record_reviews(user_id, reviews)
-
-    assert result['total_processed'] == 3
-    assert result['successful'] == 0
-    assert result['failed'] == 3
-
-    for res in result['results']:
-        assert res['success'] is False
-        assert 'Quality must be between 0 and 5' in res['error']
-
-    # Verify save was NOT called (no successful reviews)
-    mock_repository.save_vocabulary.assert_not_called()
 
 
 def test_record_reviews_word_not_found(mock_repository):
@@ -216,23 +180,21 @@ def test_record_reviews_mixed_valid_invalid(mock_repository):
 
     service = VocabularyService(vocabulary_repository=mock_repository)
     reviews = [
-        {'word': 'word1', 'quality': 5},  # Valid
-        {'word': 'nonexistent', 'quality': 4},  # Word not found
-        {'word': 'word2', 'quality': 10},  # Invalid quality
-        {'word': 'word2', 'quality': 3}  # Valid
+        {'word': 'word1', 'quality': 5},      # Valid
+        {'word': 'nonexistent', 'quality': 4}, # Word not found
+        {'word': 'word2', 'quality': 3}        # Valid
     ]
 
     result = service.record_reviews(user_id, reviews)
 
-    assert result['total_processed'] == 4
+    assert result['total_processed'] == 3
     assert result['successful'] == 2
-    assert result['failed'] == 2
+    assert result['failed'] == 1
 
     # Check individual results
-    assert result['results'][0]['success'] is True  # word1
+    assert result['results'][0]['success'] is True   # word1
     assert result['results'][1]['success'] is False  # nonexistent
-    assert result['results'][2]['success'] is False  # invalid quality
-    assert result['results'][3]['success'] is True  # word2
+    assert result['results'][2]['success'] is True   # word2
 
     # Verify save was called once (had successful reviews)
     mock_repository.save_vocabulary.assert_called_once()

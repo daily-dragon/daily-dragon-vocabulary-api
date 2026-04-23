@@ -3,7 +3,7 @@ from typing import Optional, List
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, Depends, HTTPException, Response, Query
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field
 from starlette.middleware.cors import CORSMiddleware
 
 from daily_dragon.auth.cognito import cognito_auth, DailyDragonCognitoToken
@@ -42,24 +42,10 @@ class Review(BaseModel):
     word: str
     quality: int = Field(..., ge=0, le=5, description="Quality rating from 0 (complete blackout) to 5 (perfect recall)")
 
-    @field_validator('quality')
-    @classmethod
-    def validate_quality(cls, v):
-        if not isinstance(v, int) or v < 0 or v > 5:
-            raise ValueError('Quality must be an integer between 0 and 5')
-        return v
-
 
 class BatchReviewRequest(BaseModel):
     """Request body for batch review submission."""
     reviews: List[Review] = Field(..., min_length=1, description="List of word reviews")
-
-    @field_validator('reviews')
-    @classmethod
-    def validate_reviews_not_empty(cls, v):
-        if len(v) == 0:
-            raise ValueError('Reviews list must contain at least one review')
-        return v
 
 
 @app.post("/daily-dragon/vocabulary", status_code=201)

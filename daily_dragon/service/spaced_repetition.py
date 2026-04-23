@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Dict, Optional
 
 
@@ -51,11 +51,7 @@ class SpacedRepetitionService:
         repetition = word_metadata.get('repetition', SpacedRepetitionService.INITIAL_REPETITION)
         interval = word_metadata.get('interval', SpacedRepetitionService.INITIAL_INTERVAL)
 
-        # Update ease factor (cannot go below MIN_EASE_FACTOR)
-        ease_factor = ease_factor + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02))
-        ease_factor = max(ease_factor, SpacedRepetitionService.MIN_EASE_FACTOR)
-
-        # Calculate interval based on quality
+        # Calculate interval based on quality (use current EF before updating it)
         if quality < 3:
             # Failed review - restart
             repetition = 0
@@ -70,8 +66,11 @@ class SpacedRepetitionService:
             else:
                 interval = int(interval * ease_factor)
 
-        # Calculate next review date
-        next_review_date = int((datetime.now() + timedelta(days=interval)).timestamp())
+        # Update ease factor after interval calculation (cannot go below MIN_EASE_FACTOR)
+        ease_factor = ease_factor + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02))
+        ease_factor = max(ease_factor, SpacedRepetitionService.MIN_EASE_FACTOR)
+
+        next_review_date = current_time + interval * 86400
 
         return {
             'interval': interval,

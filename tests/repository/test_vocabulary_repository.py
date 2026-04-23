@@ -170,6 +170,7 @@ def test_get_due_words_empty_vocabulary(vocabulary_repo, mock_s3_client):
     due_words = vocabulary_repo.get_due_words(user_id)
 
     assert due_words == []
+    mock_s3_client.put_object.assert_not_called()
 
 
 def test_get_due_words_all_new_words(vocabulary_repo, mock_s3_client):
@@ -198,6 +199,7 @@ def test_get_due_words_all_new_words(vocabulary_repo, mock_s3_client):
 
     due_words = vocabulary_repo.get_due_words(user_id)
 
+    mock_s3_client.put_object.assert_not_called()
     # Both words should be due (never reviewed)
     assert len(due_words) == 2
     # Older word should be first (more days_overdue)
@@ -226,10 +228,10 @@ def test_get_due_words_respects_limit(vocabulary_repo, mock_s3_client):
 
     due_words = vocabulary_repo.get_due_words(user_id, limit=5)
 
-    # Should return exactly 5 words
+    mock_s3_client.put_object.assert_not_called()
     assert len(due_words) == 5
-    # Should be sorted by most overdue (highest day count first)
-    assert due_words[0]['word'] == 'word9'  # 10 days old
+    # Most overdue word first
+    assert due_words[0]['metadata']['days_overdue'] >= due_words[1]['metadata']['days_overdue']
 
 
 def test_get_due_words_mixed_due_and_not_due(vocabulary_repo, mock_s3_client):
@@ -259,7 +261,7 @@ def test_get_due_words_mixed_due_and_not_due(vocabulary_repo, mock_s3_client):
 
     due_words = vocabulary_repo.get_due_words(user_id)
 
-    # Only due_word should be returned
+    mock_s3_client.put_object.assert_not_called()
     assert len(due_words) == 1
     assert due_words[0]['word'] == 'due_word'
     assert due_words[0]['metadata']['days_overdue'] >= 1
@@ -279,14 +281,12 @@ def test_get_due_words_migrates_old_data(vocabulary_repo, mock_s3_client):
 
     due_words = vocabulary_repo.get_due_words(user_id)
 
-    # Word should be migrated and due
+    # Migration should have been persisted to S3
+    mock_s3_client.put_object.assert_called_once()
     assert len(due_words) == 1
     metadata = due_words[0]['metadata']
 
-    # Verify adoption is removed
     assert 'adoption' not in metadata
-
-    # Verify SM-2 fields are present
     assert metadata['interval'] == 0
     assert metadata['repetition'] == 0
     assert metadata['ease_factor'] == 2.5

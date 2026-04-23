@@ -14,7 +14,6 @@ class VocabularyService:
 
     def __init__(self, vocabulary_repository: VocabularyRepository = Depends()):
         self.vocabulary_repository = vocabulary_repository
-        self.spaced_repetition_service = SpacedRepetitionService()
 
     def add_word(self, user_id: str, word: str):
         return self.vocabulary_repository.add_word(user_id, word)
@@ -48,7 +47,6 @@ class VocabularyService:
 
         return {
             'due_words': due_words,
-            'total_due': len(due_words),  # Total is same as returned since limit is applied in repo
             'returned': len(due_words)
         }
 
@@ -63,11 +61,12 @@ class VocabularyService:
         Returns:
             Dict with results list, total_processed, successful, and failed counts
         """
-        # Get vocabulary once for efficiency
         vocabulary = self.vocabulary_repository.get_vocabulary(user_id)
 
-        # Apply migration to all words
+        migrated_any = False
         for word_key in vocabulary:
+            if 'adoption' in vocabulary[word_key] or 'interval' not in vocabulary[word_key]:
+                migrated_any = True
             vocabulary[word_key] = self.vocabulary_repository.ensure_spaced_repetition_fields(
                 vocabulary[word_key]
             )
@@ -81,17 +80,6 @@ class VocabularyService:
             quality = review['quality']
 
             try:
-                # Validate quality
-                if not isinstance(quality, int) or quality < 0 or quality > 5:
-                    results.append({
-                        'word': word,
-                        'success': False,
-                        'error': 'Quality must be between 0 and 5'
-                    })
-                    failed += 1
-                    continue
-
-                # Check word exists
                 if word not in vocabulary:
                     results.append({
                         'word': word,
@@ -101,13 +89,11 @@ class VocabularyService:
                     failed += 1
                     continue
 
-                # Calculate next review using SM-2 algorithm
-                updated_metadata = self.spaced_repetition_service.calculate_next_review(
+                updated_metadata = SpacedRepetitionService.calculate_next_review(
                     vocabulary[word],
                     quality
                 )
 
-                # Merge updated metadata (preserve created_on)
                 vocabulary[word].update(updated_metadata)
 
                 results.append({
@@ -127,8 +113,7 @@ class VocabularyService:
                 })
                 failed += 1
 
-        # Save vocabulary once at the end (only if there were successful reviews)
-        if successful > 0:
+        if successful > 0 or migrated_any:
             self.vocabulary_repository.save_vocabulary(user_id, vocabulary)
 
         return {

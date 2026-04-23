@@ -53,7 +53,7 @@ class TestSpacedRepetitionService:
         assert result['repetition'] == 2
 
     def test_calculate_next_review_subsequent_success(self):
-        """Test that subsequent successful reviews multiply interval by ease factor."""
+        """Test that subsequent successful reviews multiply interval by the pre-update ease factor."""
         metadata = {
             'interval': 6,
             'repetition': 2,
@@ -62,9 +62,11 @@ class TestSpacedRepetitionService:
             'last_review_date': int((datetime.now() - timedelta(days=6)).timestamp())
         }
 
-        result = SpacedRepetitionService.calculate_next_review(metadata, quality=4)
+        # quality=3 changes EF: new_ef = 2.5 - 0.14 = 2.36
+        # interval must use old EF (2.5) → int(6 * 2.5) = 15, not int(6 * 2.36) = 14
+        result = SpacedRepetitionService.calculate_next_review(metadata, quality=3)
 
-        assert result['interval'] == int(6 * 2.5)  # 15 days
+        assert result['interval'] == int(6 * 2.5)  # 15, not 14
         assert result['repetition'] == 3
 
     def test_calculate_next_review_failed(self):
@@ -246,11 +248,11 @@ class TestSpacedRepetitionService:
         assert metadata['interval'] == 6
         assert metadata['repetition'] == 2
 
-        # Third review (quality 4) - should multiply by ease factor
+        # Third review (quality 3) - interval uses pre-update ease factor
         ease_factor_before = metadata['ease_factor']
-        metadata = SpacedRepetitionService.calculate_next_review(metadata, quality=4)
+        metadata = SpacedRepetitionService.calculate_next_review(metadata, quality=3)
         expected_interval = int(6 * ease_factor_before)
-        assert metadata['interval'] == expected_interval
+        assert metadata['interval'] == expected_interval  # uses old EF, not post-update EF
         assert metadata['repetition'] == 3
 
     def test_ease_factor_rounded_to_two_decimals(self):
