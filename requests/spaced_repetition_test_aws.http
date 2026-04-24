@@ -4,7 +4,7 @@
 ### ============================================================
 
 @token = <paste your token here>
-@base_url = https://0xok06khai.execute-api.us-west-2.amazonaws.com
+@base_url = https://0xok06khai.execute-api.us-west-2.amazonaws.com/dev
 
 
 ### Phase 1a — Add test words (if not already in vocabulary)
@@ -41,7 +41,7 @@ POST {{base_url}}/daily-dragon/vocabulary/reviews
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
-{"reviews": [{"word": "你好", "quality": 10}]}
+{"reviews": [{"word": "搞", "quality": 10}]}
 
 
 ### Phase 2b — 你好 should no longer appear in due words
@@ -56,7 +56,7 @@ POST {{base_url}}/daily-dragon/vocabulary/reviews
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
-{"reviews": [{"word": "你好", "quality": 10}]}
+{"reviews": [{"word": "搞", "quality": 10}]}
 
 
 ### Phase 3a — Failed review resets the word
@@ -65,7 +65,7 @@ POST {{base_url}}/daily-dragon/vocabulary/reviews
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
-{"reviews": [{"word": "学习", "quality": 3}]}
+{"reviews": [{"word": "作者", "quality": 3}]}
 
 
 ### Phase 3b — Failed word should be due again immediately
@@ -116,3 +116,15 @@ Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {"reviews": [{"word": "你好", "quality": -1}]}
+
+### Cleanup — Delete test words
+DELETE {{base_url}}/daily-dragon/vocabulary/%E4%BD%A0%E5%A5%BD
+Authorization: Bearer {{token}}
+
+###
+DELETE {{base_url}}/daily-dragon/vocabulary/%E5%AD%A6%E4%B9%A0
+Authorization: Bearer {{token}}
+
+###
+DELETE {{base_url}}/daily-dragon/vocabulary/%E4%B8%AD%E6%96%87
+Authorization: Bearer {{token}}
