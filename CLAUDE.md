@@ -45,18 +45,88 @@ The codebase follows a layered architecture:
 - **Repository Pattern**: `VocabularyRepository` encapsulates all S3 interactions. Each user's vocabulary is stored as `{user_id}_vocabulary.json` in the configured S3 bucket.
 - **Cognito Authentication**: All endpoints require authentication via AWS Cognito. The `auth.sub` field contains the user ID.
 - **Per-User Data Isolation**: Each user has their own vocabulary file in S3, keyed by their Cognito sub (user ID).
+- **Spaced Repetition**: SM-2 algorithm for optimized review scheduling. Batch reviews for efficiency (single S3 save per batch).
 
 ### Vocabulary Data Structure
 
-Each word in the vocabulary has the following structure:
+Each word in the vocabulary has the following structure with spaced repetition fields:
 ```json
 {
   "word": {
-    "adoption": 0,
-    "created_on": 1234567890
+    "created_on": 1234567890,
+    "interval": 0,
+    "repetition": 0,
+    "ease_factor": 2.5,
+    "next_review_date": null,
+    "last_review_date": null
   }
 }
 ```
+
+**Fields:**
+- `created_on`: Unix timestamp when word was added
+- `interval`: Days until next review (starts at 0)
+- `repetition`: Consecutive successful reviews (starts at 0)
+- `ease_factor`: SM-2 ease factor (starts at 2.5, minimum 1.3)
+- `next_review_date`: Unix timestamp of next review (null = immediately due)
+- `last_review_date`: Unix timestamp of last review (null = never reviewed)
+
+**Note:** The `adoption` field from older versions has been removed. Existing vocabulary files are automatically migrated when accessed (lazy migration).
+
+## Spaced Repetition System
+
+The API implements the SuperMemo-2 (SM-2) spaced repetition algorithm for optimized vocabulary learning.
+
+### SM-2 Algorithm
+
+**Quality Ratings (0-10):**
+- 0-1: Complete blackout, didn't remember at all
+- 2-3: Incorrect, but word felt familiar
+- 4: Incorrect, but seemed easy to recall
+- 5: Correct with serious difficulty
+- 6-7: Correct with some difficulty
+- 8: Correct after hesitation
+- 9: Good recall
+- 10: Perfect recall
+
+**Interval Progression:**
+- Failed review (quality < 5): Reset to immediate review (interval = 0, repetition = 0)
+- First successful review: 1 day
+- Second successful review: 6 days
+- Subsequent reviews: previous_interval × ease_factor
+
+**Ease Factor:**
+- Starts at 2.5 for new words
+- Adjusted based on quality rating: `EF' = EF + (0.1 - (10 - q) * (0.04 + (10 - q) * 0.005))`
+- Minimum value: 1.3
+
+### Spaced Repetition Endpoints
+
+**GET /daily-dragon/vocabulary/due**
+- Returns up to 5 words that are due for review
+- Sorted by most overdue first
+- New words (never reviewed) are immediately due
+
+**POST /daily-dragon/vocabulary/reviews**
+- Submit batch reviews for multiple words
+- Request body: `{"reviews": [{"word": "你好", "quality": 10}, ...]}`
+- Returns individual results for each word (success/failure)
+- Single S3 save for entire batch (efficient)
+
+### Implementation Details
+
+**Service Layer:**
+- `SpacedRepetitionService` (`service/spaced_repetition.py`): Stateless utility implementing SM-2 algorithm
+- `VocabularyService` (`service/vocabulary_service.py`): Orchestrates review operations
+
+**Repository Layer:**
+- `ensure_spaced_repetition_fields()`: Lazy migration from old data format
+- `get_due_words()`: Filters and sorts due words
+
+**Lazy Migration:**
+- Old vocabulary files (with `adoption` field) are automatically migrated when accessed
+- No batch migration required - happens transparently on read operations
+- Migration removes `adoption` field and adds SM-2 fields with default values
 
 ## Testing Patterns
 

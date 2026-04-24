@@ -1,9 +1,9 @@
 import logging
-from typing import Optional
+from typing import Optional, List
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, Depends, HTTPException, Response, Query
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from starlette.middleware.cors import CORSMiddleware
 
 from daily_dragon.auth.cognito import cognito_auth, DailyDragonCognitoToken
@@ -35,6 +35,17 @@ app.add_middleware(
 
 class WordEntry(BaseModel):
     word: str
+
+
+class Review(BaseModel):
+    """A single word review with quality rating."""
+    word: str
+    quality: int = Field(..., ge=0, le=10, description="Quality rating from 0 (complete blackout) to 10 (perfect recall)")
+
+
+class BatchReviewRequest(BaseModel):
+    """Request body for batch review submission."""
+    reviews: List[Review] = Field(..., min_length=1, description="List of word reviews")
 
 
 @app.post("/daily-dragon/vocabulary", status_code=201)
@@ -71,3 +82,37 @@ def delete_word(word: str, vocabulary_service: VocabularyService = Depends(),
 @app.options("/daily-dragon/vocabulary")
 def options_vocabulary():
     return Response(status_code=200)
+
+
+@app.get("/daily-dragon/vocabulary/due")
+def get_due_words(vocabulary_service: VocabularyService = Depends(),
+                  auth: DailyDragonCognitoToken = Depends(cognito_auth.auth_required)):
+    """
+    Get words that are due for review based on spaced repetition schedule.
+    Returns up to 5 words, sorted by most overdue first.
+    """
+    user_id = auth.sub
+    return vocabulary_service.get_due_words(user_id)
+
+
+@app.post("/daily-dragon/vocabulary/reviews")
+def submit_reviews(request: BatchReviewRequest,
+                   vocabulary_service: VocabularyService = Depends(),
+                   auth: DailyDragonCognitoToken = Depends(cognito_auth.auth_required)):
+    """
+    Submit quality ratings for multiple words at once.
+    Each review updates the word's spaced repetition schedule using the SM-2 algorithm.
+
+    Quality ratings (0-10):
+    - 0-1: Complete blackout
+    - 2-3: Incorrect, but word felt familiar
+    - 4: Incorrect, but seemed easy to recall
+    - 5: Correct with serious difficulty
+    - 6-7: Correct with some difficulty
+    - 8: Correct after hesitation
+    - 9: Good recall
+    - 10: Perfect recall
+    """
+    user_id = auth.sub
+    reviews = [{'word': r.word, 'quality': r.quality} for r in request.reviews]
+    return vocabulary_service.record_reviews(user_id, reviews)

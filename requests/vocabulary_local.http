@@ -21,3 +21,21 @@ Authorization: Bearer <token>
 # use tools/encode.py to encode Chinese characters
 DELETE http://127.0.0.1:8000/daily-dragon/vocabulary/%E4%BD%A0%E5%A5%BD
 Authorization: Bearer <token>
+
+### Get due words for review (spaced repetition)
+GET http://127.0.0.1:8000/daily-dragon/vocabulary/due
+Authorization: Bearer <token>
+
+### Submit batch reviews with quality ratings (spaced repetition)
+# Quality ratings: 0 (blackout) to 10 (perfect recall)
+POST http://127.0.0.1:8000/daily-dragon/vocabulary/reviews
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "reviews": [
+    {"word": "你好", "quality": 10},
+    {"word": "学习", "quality": 8},
+    {"word": "中文", "quality": 6}
+  ]
+}
