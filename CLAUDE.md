@@ -1,5 +1,7 @@
 # CLAUDE.md
 
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
 FastAPI vocabulary API deployed as AWS Lambda, storing per-user data in S3.
 
 ## Commands
@@ -15,11 +17,16 @@ pytest tests/test_daily_dragon_app.py::test_name     # single test
 
 ```
 daily_dragon_app.py → service/vocabulary_service.py → repository/vocabulary_repository.py → S3
+                    → service/settings_service.py    → repository/settings_repository.py   → S3
 ```
 
+All services and repositories are wired via FastAPI `Depends()` — no explicit DI setup needed.
+
 - **Auth**: Cognito via `cognito_auth.auth_required`; `auth.sub` is the user ID
-- **Storage**: One JSON file per user in S3: `{user_id}_vocabulary.json`
-- **Spaced repetition**: SM-2 algorithm in `service/spaced_repetition.py`; `SpacedRepetitionService` is stateless
+- **Storage**: Two JSON files per user in S3: `{user_id}_vocabulary.json` and `{user_id}_settings.json`
+- **Spaced repetition**: SM-2 algorithm in `service/spaced_repetition.py`; `SpacedRepetitionService` is stateless (all `@staticmethod`)
+
+Repositories read the full S3 file on every operation and write it back on mutations. No caching or concurrency control — concurrent requests for the same user can cause lost updates.
 
 ## Vocabulary data structure
 
@@ -40,7 +47,11 @@ Old files with `adoption` field are lazily migrated on read (`ensure_spaced_repe
 
 ## Testing
 
-Uses `dependency_overrides` to mock `VocabularyService` and `cognito_auth.auth_required`. See `tests/conftest.py`.
+Three test layers, each with a different mocking strategy:
+
+1. **Endpoint tests** (`tests/test_daily_dragon_app.py`, `tests/test_settings_endpoints.py`): `TestClient` with `app.dependency_overrides` replacing `VocabularyService`, `SettingsService`, and `cognito_auth.auth_required`. See `tests/conftest.py` for shared fixtures.
+2. **Service unit tests** (`tests/service/`): Service classes instantiated directly with a `MagicMock` repository.
+3. **Repository unit tests** (`tests/repository/`): `monkeypatch` for `S3_BUCKET` env var; `unittest.mock.patch("boto3.client", ...)` to inject a mock S3 client.
 
 ## HSK Vocabulary
 
@@ -52,9 +63,7 @@ hsk/code/         — parse_hsk_pdfs.py: extracts words and regenerates JSONs
 hsk/json/         — hsk1.json … hsk7.json (committed, deployed to S3)
 ```
 
-Each JSON is a **cumulative** word list — `hsk3.json` contains all words from HSK 1–3. Word counts: 300 / 497 / 990 / 1980 / 3559 / 5336 / 10898.
-
-To regenerate JSONs after updating PDFs:
+Each JSON contains only the words **unique to that level** (deduplicated across levels). To regenerate JSONs after updating PDFs:
 ```bash
 pip install pdfplumber
 python hsk/code/parse_hsk_pdfs.py
@@ -64,7 +73,7 @@ JSON files are deployed to `s3://daily-dragon-bucket/hsk/` via CDK on every push
 
 ## CDK
 
-`cdk/app.py` deploys `hsk/json/` to `s3://daily-dragon-bucket/hsk/` using `BucketDeployment`. Skips re-upload if files are unchanged (CloudFormation asset hash check).
+`cdk/app.py` deploys `hsk/json/` to `s3://daily-dragon-bucket/hsk/` using `BucketDeployment`. Skips re-upload if files are unchanged (CloudFormation asset hash check). Only HSK static data is CDK-managed — Lambda, API Gateway, and Cognito were created manually.
 
 One-time setup — run locally with admin credentials before first CI deploy:
 ```bash
@@ -73,12 +82,14 @@ One-time setup — run locally with admin credentials before first CI deploy:
 
 ## Deployment
 
-GitHub Actions deploys to Lambda on push to `main` (via Mangum adapter in `daily_dragon_handler.py`). Also runs `cdk bootstrap` + `cdk deploy` for HSK files. Manual deployment not needed.
+GitHub Actions deploys to Lambda on push to `main`. The app is packaged as a **Lambda Layer** (deps + `daily_dragon/` zipped into `daily_dragon_layer.zip`, uploaded to `s3://daily-dragon-layer/`). The Lambda function `daily-dragon` is updated to reference the new layer ARN. Entry point is `daily_dragon_handler.daily_dragon_handler` (Mangum wrapper). Manual deployment not needed.
 
 ## Environment
 
 `.env` file: `S3_BUCKET=daily-dragon-bucket`
 
+Cognito pool ID, app client ID, and CORS origins are hardcoded in `auth/cognito.py` and `daily_dragon_app.py` respectively.
+
 ## HTTP examples
 
-`requests/` — `vocabulary_local.http`, `vocabulary_aws.http`, `spaced_repetition_test_local.http`, `spaced_repetition_test_aws.http`
+`requests/` — `vocabulary_local.http`, `vocabulary_aws.http`, `settings_local.http`, `settings_aws.http`, `spaced_repetition_test_local.http`, `spaced_repetition_test_aws.http`
