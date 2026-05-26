@@ -1,4 +1,3 @@
-import pytest
 from datetime import datetime, timedelta
 from daily_dragon.service.spaced_repetition import SpacedRepetitionService
 
@@ -269,3 +268,18 @@ class TestSpacedRepetitionService:
 
         # Check that ease_factor has at most 2 decimal places
         assert len(str(result['ease_factor']).split('.')[-1]) <= 2
+
+    def test_is_mastered_returns_true_at_threshold(self):
+        assert SpacedRepetitionService.is_mastered({'interval': 21}) is True
+
+    def test_is_mastered_returns_true_above_threshold(self):
+        assert SpacedRepetitionService.is_mastered({'interval': 50}) is True
+
+    def test_is_mastered_returns_false_below_threshold(self):
+        assert SpacedRepetitionService.is_mastered({'interval': 20}) is False
+
+    def test_is_mastered_returns_false_for_new_word(self):
+        assert SpacedRepetitionService.is_mastered({'interval': 0}) is False
+
+    def test_is_mastered_returns_false_when_interval_missing(self):
+        assert SpacedRepetitionService.is_mastered({}) is False

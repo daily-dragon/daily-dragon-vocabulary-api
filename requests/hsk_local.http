@@ -1,0 +1,17 @@
+@token =
+
+### Get HSK progress for all levels
+GET http://127.0.0.1:8000/daily-dragon/hsk/progress
+Authorization: Bearer {{token}}
+
+### Submit reviews (also triggers check_and_promote after each batch)
+POST http://127.0.0.1:8000/daily-dragon/vocabulary/reviews
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "reviews": [
+        {"word": "你好", "quality": 8},
+        {"word": "谢谢", "quality": 9}
+    ]
+}
