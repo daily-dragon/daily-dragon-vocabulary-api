@@ -9,7 +9,7 @@ from fastapi_cognito import CognitoAuth, CognitoSettings
 class DailyDragonCognitoToken(BaseModel):
     aud: Optional[str] = None
     auth_time: Optional[int] = None
-    cognito_username: Optional[str] = Field(alias="cognito:username")
+    cognito_username: Optional[str] = Field(default=None, alias="cognito:username")
     email: Optional[str] = None
     email_verified: bool = False
     event_id: Optional[str] = None
