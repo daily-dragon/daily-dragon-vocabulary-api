@@ -1,6 +1,6 @@
 """
-Parse HSK vocabulary PDFs and produce cumulative word lists.
-Each level's JSON contains all words from HSK 1 through that level.
+Parse HSK vocabulary PDFs and produce unique-per-level word lists.
+Each level's JSON contains only words introduced at that level (not in any prior level).
 Strategy: vocabulary words sit at x=50 in the PDF; example sentences are indented.
 """
 
@@ -16,7 +16,7 @@ CHINESE_ONLY = re.compile(r"^[\u4e00-\u9fff]+$")
 VOCAB_X = 50.0
 X_TOLERANCE = 5.0
 
-EXPECTED = {1: 300, 2: 496, 3: 988, 4: 1978, 5: 3557, 6: 5334, 7: 10896}
+EXPECTED = {1: 300, 2: 197, 3: 493, 4: 990, 5: 1579, 6: 1777, 7: 5562}
 
 
 def extract_words_from_pdf(pdf_path: Path) -> list[str]:
@@ -35,27 +35,26 @@ def extract_words_from_pdf(pdf_path: Path) -> list[str]:
 def main():
     JSON_DIR.mkdir(parents=True, exist_ok=True)
     all_ok = True
-    cumulative: list[str] = []
     seen_all: set[str] = set()
 
     for level in range(1, 8):
         pdf_path = PDF_DIR / f"hsk-{level}-vocabulary.pdf"
+        level_words = []
         for w in extract_words_from_pdf(pdf_path):
             if w not in seen_all:
                 seen_all.add(w)
-                cumulative.append(w)
+                level_words.append(w)
 
-        snapshot = list(cumulative)
         out_path = JSON_DIR / f"hsk{level}.json"
         with open(out_path, "w", encoding="utf-8") as f:
-            json.dump(snapshot, f, ensure_ascii=False, indent=2)
+            json.dump(level_words, f, ensure_ascii=False, indent=2)
 
         expected = EXPECTED[level]
-        ok = len(snapshot) == expected
+        ok = len(level_words) == expected
         if not ok:
             all_ok = False
         status = "OK" if ok else f"MISMATCH (expected {expected})"
-        print(f"HSK {level}: {len(snapshot)} cumulative words -> {out_path.name} [{status}]")
+        print(f"HSK {level}: {len(level_words)} unique words -> {out_path.name} [{status}]")
 
     print("\nAll counts match." if all_ok else "\nSome counts do not match - review above.")
 
