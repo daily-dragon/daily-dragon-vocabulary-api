@@ -8,6 +8,7 @@ from starlette.middleware.cors import CORSMiddleware
 
 from daily_dragon.auth.cognito import cognito_auth, DailyDragonCognitoToken
 from daily_dragon.exceptions import WordAlreadyExistsError
+from daily_dragon.service.hsk_service import HskService
 from daily_dragon.service.settings_service import SettingsService
 from daily_dragon.service.vocabulary_service import VocabularyService
 
@@ -59,6 +60,19 @@ class BatchReviewRequest(BaseModel):
     reviews: List[Review] = Field(..., min_length=1, description="List of word reviews")
 
 
+class LevelProgress(BaseModel):
+    level: int
+    total: int
+    mastered: int
+    in_progress: int
+    new: int
+
+
+class HskProgressResponse(BaseModel):
+    current_level: int
+    levels: List[LevelProgress]
+
+
 @app.get("/daily-dragon/settings", status_code=200)
 def get_settings(
         auth: DailyDragonCognitoToken = Depends(cognito_auth.auth_required),
@@ -74,6 +88,18 @@ def update_settings(
         settings_service: SettingsService = Depends()
 ) -> SettingsResponse:
     return SettingsResponse(**settings_service.update_settings(auth.sub, request.model_dump()))
+
+
+@app.get("/daily-dragon/hsk/progress", response_model=HskProgressResponse)
+def get_hsk_progress(
+        auth: DailyDragonCognitoToken = Depends(cognito_auth.auth_required),
+        settings_service: SettingsService = Depends(),
+        hsk_service: HskService = Depends(),
+) -> HskProgressResponse:
+    user_id = auth.sub
+    settings = settings_service.get_settings(user_id)
+    levels = [hsk_service.get_level_progress(user_id, lvl) for lvl in range(1, 8)]
+    return HskProgressResponse(current_level=settings['hsk_level'], levels=[LevelProgress(**l) for l in levels])
 
 
 @app.post("/daily-dragon/vocabulary", status_code=201)
@@ -126,6 +152,7 @@ def get_due_words(vocabulary_service: VocabularyService = Depends(),
 @app.post("/daily-dragon/vocabulary/reviews")
 def submit_reviews(request: BatchReviewRequest,
                    vocabulary_service: VocabularyService = Depends(),
+                   hsk_service: HskService = Depends(),
                    auth: DailyDragonCognitoToken = Depends(cognito_auth.auth_required)):
     """
     Submit quality ratings for multiple words at once.
@@ -143,4 +170,6 @@ def submit_reviews(request: BatchReviewRequest,
     """
     user_id = auth.sub
     reviews = [{'word': r.word, 'quality': r.quality} for r in request.reviews]
-    return vocabulary_service.record_reviews(user_id, reviews)
+    result = vocabulary_service.record_reviews(user_id, reviews)
+    hsk_service.check_and_promote(user_id)
+    return result

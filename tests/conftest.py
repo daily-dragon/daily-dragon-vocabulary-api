@@ -4,6 +4,7 @@ from unittest.mock import MagicMock
 
 from daily_dragon.auth.cognito import cognito_auth, DailyDragonCognitoToken
 from daily_dragon.daily_dragon_app import app
+from daily_dragon.service.hsk_service import HskService
 from daily_dragon.service.settings_service import SettingsService
 from daily_dragon.service.vocabulary_service import VocabularyService
 
@@ -28,10 +29,16 @@ def mock_settings_service():
 
 
 @pytest.fixture
-def test_client(mock_service, mock_settings_service):
+def mock_hsk_service():
+    return MagicMock()
+
+
+@pytest.fixture
+def test_client(mock_service, mock_settings_service, mock_hsk_service):
     app.dependency_overrides = dict()
     app.dependency_overrides[VocabularyService] = lambda: mock_service
     app.dependency_overrides[SettingsService] = lambda: mock_settings_service
+    app.dependency_overrides[HskService] = lambda: mock_hsk_service
     app.dependency_overrides[cognito_auth.auth_required] = lambda: dummy_auth()
 
     client = TestClient(app)

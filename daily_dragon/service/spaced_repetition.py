@@ -24,6 +24,11 @@ class SpacedRepetitionService:
     INITIAL_EASE_FACTOR = 2.5
     INITIAL_INTERVAL = 0
     INITIAL_REPETITION = 0
+    MASTERY_INTERVAL = 21
+
+    @staticmethod
+    def is_mastered(word_metadata: Dict) -> bool:
+        return word_metadata.get('interval', 0) >= SpacedRepetitionService.MASTERY_INTERVAL
 
     @staticmethod
     def calculate_next_review(word_metadata: Dict, quality: int) -> Dict:

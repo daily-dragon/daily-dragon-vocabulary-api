@@ -18,13 +18,17 @@ pytest tests/test_daily_dragon_app.py::test_name     # single test
 ```
 daily_dragon_app.py → service/vocabulary_service.py → repository/vocabulary_repository.py → S3
                     → service/settings_service.py    → repository/settings_repository.py   → S3
+                    → service/hsk_service.py         → repository/hsk_repository.py        → S3 (hsk/)
+                                                     → repository/vocabulary_repository.py → S3
+                                                     → repository/settings_repository.py   → S3
 ```
 
 All services and repositories are wired via FastAPI `Depends()` — no explicit DI setup needed.
 
 - **Auth**: Cognito via `cognito_auth.auth_required`; `auth.sub` is the user ID
 - **Storage**: Two JSON files per user in S3: `{user_id}_vocabulary.json` and `{user_id}_settings.json`
-- **Spaced repetition**: SM-2 algorithm in `service/spaced_repetition.py`; `SpacedRepetitionService` is stateless (all `@staticmethod`)
+- **HSK static data**: Shared read-only files at `s3://daily-dragon-bucket/hsk/hsk1.json` … `hsk7.json`
+- **Spaced repetition**: SM-2 algorithm in `service/spaced_repetition.py`; `SpacedRepetitionService` is stateless (all `@staticmethod`). `MASTERY_INTERVAL = 21` days defines a mature card.
 
 Repositories read the full S3 file on every operation and write it back on mutations. No caching or concurrency control — concurrent requests for the same user can cause lost updates.
 
