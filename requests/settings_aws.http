@@ -1,0 +1,31 @@
+### Get settings
+GET https://0xok06khai.execute-api.us-west-2.amazonaws.com/dev/daily-dragon/settings
+Authorization: Bearer <token>
+
+### Update HSK level
+PATCH https://0xok06khai.execute-api.us-west-2.amazonaws.com/dev/daily-dragon/settings
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+    "hsk_level": 2
+}
+
+### Mark placement test completed
+PATCH https://0xok06khai.execute-api.us-west-2.amazonaws.com/dev/daily-dragon/settings
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+    "placement_completed": true
+}
+
+### Update both fields at once
+PATCH https://0xok06khai.execute-api.us-west-2.amazonaws.com/dev/daily-dragon/settings
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+    "hsk_level": 3,
+    "placement_completed": true
+}

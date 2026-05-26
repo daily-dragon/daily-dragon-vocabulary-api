@@ -1,0 +1,33 @@
+@token =
+
+### Get settings
+GET http://127.0.0.1:8000/daily-dragon/settings
+Authorization: Bearer {{token}}
+
+### Update HSK level
+PATCH http://127.0.0.1:8000/daily-dragon/settings
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "hsk_level": 1
+}
+
+### Mark placement test completed
+PATCH http://127.0.0.1:8000/daily-dragon/settings
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "placement_completed": true
+}
+
+### Update both fields at once
+PATCH http://127.0.0.1:8000/daily-dragon/settings
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "hsk_level": 3,
+    "placement_completed": true
+}

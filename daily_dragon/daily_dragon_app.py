@@ -8,6 +8,7 @@ from starlette.middleware.cors import CORSMiddleware
 
 from daily_dragon.auth.cognito import cognito_auth, DailyDragonCognitoToken
 from daily_dragon.exceptions import WordAlreadyExistsError
+from daily_dragon.service.settings_service import SettingsService
 from daily_dragon.service.vocabulary_service import VocabularyService
 
 logging.basicConfig(
@@ -33,6 +34,16 @@ app.add_middleware(
 )
 
 
+class SettingsResponse(BaseModel):
+    hsk_level: int
+    placement_completed: bool
+
+
+class SettingsUpdateRequest(BaseModel):
+    hsk_level: Optional[int] = None
+    placement_completed: Optional[bool] = None
+
+
 class WordEntry(BaseModel):
     word: str
 
@@ -46,6 +57,23 @@ class Review(BaseModel):
 class BatchReviewRequest(BaseModel):
     """Request body for batch review submission."""
     reviews: List[Review] = Field(..., min_length=1, description="List of word reviews")
+
+
+@app.get("/daily-dragon/settings", status_code=200)
+def get_settings(
+        auth: DailyDragonCognitoToken = Depends(cognito_auth.auth_required),
+        settings_service: SettingsService = Depends()
+) -> SettingsResponse:
+    return SettingsResponse(**settings_service.get_settings(auth.sub))
+
+
+@app.patch("/daily-dragon/settings", status_code=200)
+def update_settings(
+        request: SettingsUpdateRequest,
+        auth: DailyDragonCognitoToken = Depends(cognito_auth.auth_required),
+        settings_service: SettingsService = Depends()
+) -> SettingsResponse:
+    return SettingsResponse(**settings_service.update_settings(auth.sub, request.model_dump()))
 
 
 @app.post("/daily-dragon/vocabulary", status_code=201)

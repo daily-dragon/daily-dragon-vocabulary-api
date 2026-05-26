@@ -18,7 +18,7 @@ class DailyDragonCognitoToken(BaseModel):
     iss: Optional[str] = None
     jti: Optional[str] = None
     origin_jti: Optional[str] = None
-    sub: Optional[str] = None
+    sub: str
     token_use: Optional[str] = None
 
 
