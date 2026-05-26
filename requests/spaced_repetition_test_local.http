@@ -1,0 +1,118 @@
+### ============================================================
+### Spaced Repetition Testing Plan - Local
+### Run these requests in order. Set your JWT token below.
+### ============================================================
+
+@token = <paste your token here>
+@base_url = http://127.0.0.1:8000
+
+
+### Phase 1a — Add test words (if not already in vocabulary)
+POST {{base_url}}/daily-dragon/vocabulary
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{"word": "你好"}
+
+###
+POST {{base_url}}/daily-dragon/vocabulary
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{"word": "学习"}
+
+###
+POST {{base_url}}/daily-dragon/vocabulary
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{"word": "中文"}
+
+
+### Phase 1b — New words should appear immediately as due
+# Expected: all 3 words returned (next_review_date is null = immediately due)
+GET {{base_url}}/daily-dragon/vocabulary/due
+Authorization: Bearer {{token}}
+
+
+### Phase 2a — Perfect review for one word
+# Expected: 你好 interval → 1 day, repetition → 1, ease_factor > 2.5
+POST {{base_url}}/daily-dragon/vocabulary/reviews
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{"reviews": [{"word": "你好", "quality": 10}]}
+
+
+### Phase 2b — 你好 should no longer appear in due words
+# Expected: 你好 absent, 学习 and 中文 still present
+GET {{base_url}}/daily-dragon/vocabulary/due
+Authorization: Bearer {{token}}
+
+
+### Phase 2c — Second perfect review (simulate next day by running after interval)
+# Expected: 你好 interval → 6 days, repetition → 2
+POST {{base_url}}/daily-dragon/vocabulary/reviews
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{"reviews": [{"word": "你好", "quality": 10}]}
+
+
+### Phase 3a — Failed review resets the word
+# Expected: 学习 interval → 0, repetition → 0 (immediately due again)
+POST {{base_url}}/daily-dragon/vocabulary/reviews
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{"reviews": [{"word": "学习", "quality": 3}]}
+
+
+### Phase 3b — Failed word should be due again immediately
+# Expected: 学习 back in due words
+GET {{base_url}}/daily-dragon/vocabulary/due
+Authorization: Bearer {{token}}
+
+
+### Phase 4 — Batch review: multiple words in one request
+# Expected: all three processed, only failed ones remain due
+POST {{base_url}}/daily-dragon/vocabulary/reviews
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "reviews": [
+    {"word": "学习", "quality": 8},
+    {"word": "中文", "quality": 6}
+  ]
+}
+
+
+### Phase 5a — Unknown word in batch: should fail gracefully
+# Expected: error for "鬼" but other words in batch still processed
+POST {{base_url}}/daily-dragon/vocabulary/reviews
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "reviews": [
+    {"word": "鬼", "quality": 10},
+    {"word": "中文", "quality": 9}
+  ]
+}
+
+
+### Phase 5b — Invalid quality value
+# Expected: 422 Unprocessable Entity
+POST {{base_url}}/daily-dragon/vocabulary/reviews
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{"reviews": [{"word": "你好", "quality": 11}]}
+
+###
+POST {{base_url}}/daily-dragon/vocabulary/reviews
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{"reviews": [{"word": "你好", "quality": -1}]}

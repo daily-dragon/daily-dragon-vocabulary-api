@@ -38,6 +38,14 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       - name: Check AWS credentials
         run: aws sts get-caller-identity
+      - name: Install CDK CLI
+        run: npm install -g aws-cdk
+      - name: Install CDK dependencies
+        run: pip install -r cdk/requirements.txt
+      - name: Bootstrap CDK
+        run: cdk bootstrap aws://$(aws sts get-caller-identity --query Account --output text)/us-west-2
+      - name: Deploy HSK vocabulary to S3
+        run: cd cdk && cdk deploy --require-approval never
       - run: aws s3 cp daily_dragon_layer.zip s3://daily-dragon-layer/daily_dragon_layer.zip
       - name: Publish new layer version
         id: publish_layer
