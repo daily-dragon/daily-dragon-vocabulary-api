@@ -1,17 +1,19 @@
+@token =
+
 ### Get all words
 GET https://0xok06khai.execute-api.us-west-2.amazonaws.com/dev/daily-dragon/vocabulary
-Authorization: Bearer <token>
+Authorization: Bearer {{token}}
 
 ### Get n random words
 GET https://0xok06khai.execute-api.us-west-2.amazonaws.com/daily-dragon/vocabulary?count=5
-Authorization: Bearer <token>
+Authorization: Bearer {{token}}
 
 ###
 OPTIONS http://0xok06khai.execute-api.us-west-2.amazonaws.com/daily-dragon/vocabulary
 
 ### Add a new word
 POST https://0xok06khai.execute-api.us-west-2.amazonaws.com/daily-dragon/vocabulary
-Authorization: Bearer <token>
+Authorization: Bearer {{token}}
 
 {
     "word": "你好"
@@ -19,16 +21,16 @@ Authorization: Bearer <token>
 
 ### Delete a word
 DELETE https://0xok06khai.execute-api.us-west-2.amazonaws.com/daily-dragon/vocabulary/%E4%BD%A0%E5%A5%BD
-Authorization: Bearer <token>
+Authorization: Bearer {{token}}
 
 ### Get due words for review (spaced repetition)
 GET https://0xok06khai.execute-api.us-west-2.amazonaws.com/daily-dragon/vocabulary/due
-Authorization: Bearer <token>
+Authorization: Bearer {{token}}
 
 ### Submit batch reviews with quality ratings (spaced repetition)
 # Quality ratings: 0 (blackout) to 10 (perfect recall)
 POST https://0xok06khai.execute-api.us-west-2.amazonaws.com/daily-dragon/vocabulary/reviews
-Authorization: Bearer <token>
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
