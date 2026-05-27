@@ -210,6 +210,16 @@ class TestCheckAndPromote:
         assert promoted is False
         mock_settings_repo.save_settings.assert_not_called()
 
+    def test_legacy_settings_without_hsk_level_defaults_to_1(self, service, mock_vocab_repo, mock_settings_repo):
+        mock_settings_repo.get_settings.return_value = {'placement_completed': False}
+        mock_vocab_repo.get_vocabulary.return_value = {}
+
+        promoted = service.check_and_promote(USER_ID)
+
+        assert promoted is False
+        saved_settings = mock_settings_repo.save_settings.call_args[0][1]
+        assert saved_settings['hsk_level'] == 1
+
     def test_seeds_first_batch_of_new_level_on_promotion(self, service, mock_vocab_repo, mock_settings_repo, mock_hsk_repo):
         mock_settings_repo.get_settings.return_value = {'hsk_level': 1, 'placement_completed': True}
         mock_vocab_repo.get_vocabulary.return_value = {

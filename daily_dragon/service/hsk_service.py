@@ -70,7 +70,10 @@ class HskService:
 
     def check_and_promote(self, user_id: str) -> bool:
         settings = self.settings_repository.get_settings(user_id)
-        current_level = settings['hsk_level']
+        current_level = settings.get('hsk_level', 1)
+        if 'hsk_level' not in settings:
+            settings['hsk_level'] = current_level
+            self.settings_repository.save_settings(user_id, settings)
 
         if current_level >= MAX_HSK_LEVEL:
             logger.info("User %s is already at max HSK level %d", user_id, current_level)
