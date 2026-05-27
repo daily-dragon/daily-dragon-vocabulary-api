@@ -68,6 +68,11 @@ class HskService:
             'new': new,
         }
 
+    def seed_initial_batch(self, user_id: str) -> int:
+        settings = self.settings_repository.get_settings(user_id)
+        level = settings.get('hsk_level', 1)
+        return self.seed_next_batch(user_id, level)
+
     def check_and_promote(self, user_id: str) -> bool:
         logger.info("check_and_promote: fetching settings for user %s", user_id)
         settings = self.settings_repository.get_settings(user_id)

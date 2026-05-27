@@ -5,6 +5,7 @@ from typing import List, Dict, Any
 from fastapi import Depends
 
 from daily_dragon.repository.vocabulary_repository import VocabularyRepository
+from daily_dragon.service.hsk_service import HskService
 from daily_dragon.service.spaced_repetition import SpacedRepetitionService
 
 logger = logging.getLogger(__name__)
@@ -12,8 +13,13 @@ logger = logging.getLogger(__name__)
 
 class VocabularyService:
 
-    def __init__(self, vocabulary_repository: VocabularyRepository = Depends()):
+    def __init__(
+        self,
+        vocabulary_repository: VocabularyRepository = Depends(),
+        hsk_service: HskService = Depends(),
+    ):
         self.vocabulary_repository = vocabulary_repository
+        self.hsk_service = hsk_service
 
     def add_word(self, user_id: str, word: str):
         return self.vocabulary_repository.add_word(user_id, word)
@@ -34,16 +40,11 @@ class VocabularyService:
         return {word: all_vocabulary[word] for word in random_words}
 
     def get_due_words(self, user_id: str) -> Dict[str, Any]:
-        """
-        Get words that are due for review.
-
-        Args:
-            user_id: User ID
-
-        Returns:
-            Dict with due_words list, total_due count, and returned count
-        """
         due_words = self.vocabulary_repository.get_due_words(user_id, limit=5)
+
+        if not due_words and not self.vocabulary_repository.get_vocabulary(user_id):
+            self.hsk_service.seed_initial_batch(user_id)
+            due_words = self.vocabulary_repository.get_due_words(user_id, limit=5)
 
         return {
             'due_words': due_words,

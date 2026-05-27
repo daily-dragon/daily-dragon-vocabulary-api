@@ -1,6 +1,5 @@
 import pytest
 from unittest.mock import MagicMock
-from datetime import datetime, timedelta
 
 from daily_dragon.service.vocabulary_service import VocabularyService
 
@@ -50,7 +49,6 @@ def test_delete_word_not_exists(mock_repository):
 
 
 def test_get_due_words(mock_repository):
-    """Test get_due_words delegates to repository and formats response."""
     due_words_data = [
         {
             'word': 'word1',
@@ -73,6 +71,39 @@ def test_get_due_words(mock_repository):
     mock_repository.get_due_words.assert_called_once_with(user_id, limit=5)
     assert result['due_words'] == due_words_data
     assert result['returned'] == 1
+
+
+def test_get_due_words_seeds_empty_vocabulary():
+    mock_repository = MagicMock()
+    mock_hsk_service = MagicMock()
+
+    seeded_due_words = [
+        {'word': '你好', 'metadata': {'interval': 0, 'next_review_date': None, 'days_overdue': 0}}
+    ]
+    mock_repository.get_due_words.side_effect = [[], seeded_due_words]
+    mock_repository.get_vocabulary.return_value = {}
+
+    service = VocabularyService(vocabulary_repository=mock_repository, hsk_service=mock_hsk_service)
+    result = service.get_due_words(user_id)
+
+    mock_hsk_service.seed_initial_batch.assert_called_once_with(user_id)
+    assert result['due_words'] == seeded_due_words
+    assert result['returned'] == 1
+
+
+def test_get_due_words_no_seed_when_words_exist_but_none_due():
+    mock_repository = MagicMock()
+    mock_hsk_service = MagicMock()
+
+    mock_repository.get_due_words.return_value = []
+    mock_repository.get_vocabulary.return_value = {'你好': {'interval': 5}}
+
+    service = VocabularyService(vocabulary_repository=mock_repository, hsk_service=mock_hsk_service)
+    result = service.get_due_words(user_id)
+
+    mock_hsk_service.seed_initial_batch.assert_not_called()
+    assert result['due_words'] == []
+    assert result['returned'] == 0
 
 
 def test_record_reviews_all_valid(mock_repository):
