@@ -6,6 +6,8 @@ from fastapi import Depends
 
 from daily_dragon.repository.vocabulary_repository import VocabularyRepository
 from daily_dragon.service.hsk_service import HskService
+
+DUE_WORDS_LIMIT = 5
 from daily_dragon.service.spaced_repetition import SpacedRepetitionService
 
 logger = logging.getLogger(__name__)
@@ -40,11 +42,14 @@ class VocabularyService:
         return {word: all_vocabulary[word] for word in random_words}
 
     def get_due_words(self, user_id: str) -> Dict[str, Any]:
-        due_words = self.vocabulary_repository.get_due_words(user_id, limit=5)
+        limit = DUE_WORDS_LIMIT
+        due_words = self.vocabulary_repository.get_due_words(user_id, limit=limit)
 
-        if not due_words and not self.vocabulary_repository.get_vocabulary(user_id):
-            self.hsk_service.seed_initial_batch(user_id)
-            due_words = self.vocabulary_repository.get_due_words(user_id, limit=5)
+        shortfall = limit - len(due_words)
+        if shortfall > 0:
+            seeded = self.hsk_service.seed_words(user_id, shortfall)
+            if seeded > 0:
+                due_words = self.vocabulary_repository.get_due_words(user_id, limit=limit)
 
         return {
             'due_words': due_words,

@@ -48,60 +48,75 @@ def test_delete_word_not_exists(mock_repository):
     mock_repository.save_vocab.assert_not_called()
 
 
-def test_get_due_words(mock_repository):
+def test_get_due_words_no_seeding_when_full(mock_repository):
     due_words_data = [
-        {
-            'word': 'word1',
-            'metadata': {
-                'created_on': 123456,
-                'interval': 0,
-                'repetition': 0,
-                'ease_factor': 2.5,
-                'next_review_date': None,
-                'last_review_date': None,
-                'days_overdue': 5
-            }
-        }
+        {'word': f'word{i}', 'metadata': {'interval': 0, 'next_review_date': None, 'days_overdue': 5}}
+        for i in range(5)
     ]
     mock_repository.get_due_words.return_value = due_words_data
+    mock_hsk_service = MagicMock()
 
-    service = VocabularyService(vocabulary_repository=mock_repository)
+    service = VocabularyService(vocabulary_repository=mock_repository, hsk_service=mock_hsk_service)
     result = service.get_due_words(user_id)
 
-    mock_repository.get_due_words.assert_called_once_with(user_id, limit=5)
+    mock_hsk_service.seed_words.assert_not_called()
     assert result['due_words'] == due_words_data
-    assert result['returned'] == 1
+    assert result['returned'] == 5
 
 
-def test_get_due_words_seeds_empty_vocabulary():
+def test_get_due_words_tops_up_when_empty():
     mock_repository = MagicMock()
     mock_hsk_service = MagicMock()
+    mock_hsk_service.seed_words.return_value = 5
 
     seeded_due_words = [
-        {'word': '你好', 'metadata': {'interval': 0, 'next_review_date': None, 'days_overdue': 0}}
+        {'word': f'新{i}', 'metadata': {'interval': 0, 'next_review_date': None, 'days_overdue': 0}}
+        for i in range(5)
     ]
     mock_repository.get_due_words.side_effect = [[], seeded_due_words]
-    mock_repository.get_vocabulary.return_value = {}
 
     service = VocabularyService(vocabulary_repository=mock_repository, hsk_service=mock_hsk_service)
     result = service.get_due_words(user_id)
 
-    mock_hsk_service.seed_initial_batch.assert_called_once_with(user_id)
+    mock_hsk_service.seed_words.assert_called_once_with(user_id, 5)
     assert result['due_words'] == seeded_due_words
-    assert result['returned'] == 1
+    assert result['returned'] == 5
 
 
-def test_get_due_words_no_seed_when_words_exist_but_none_due():
+def test_get_due_words_tops_up_partial_shortfall():
     mock_repository = MagicMock()
     mock_hsk_service = MagicMock()
+    mock_hsk_service.seed_words.return_value = 3
 
-    mock_repository.get_due_words.return_value = []
-    mock_repository.get_vocabulary.return_value = {'你好': {'interval': 5}}
+    initial_due = [
+        {'word': f'due{i}', 'metadata': {'interval': 5, 'next_review_date': 0, 'days_overdue': 3}}
+        for i in range(2)
+    ]
+    topped_up = initial_due + [
+        {'word': f'新{i}', 'metadata': {'interval': 0, 'next_review_date': None, 'days_overdue': 0}}
+        for i in range(3)
+    ]
+    mock_repository.get_due_words.side_effect = [initial_due, topped_up]
 
     service = VocabularyService(vocabulary_repository=mock_repository, hsk_service=mock_hsk_service)
     result = service.get_due_words(user_id)
 
-    mock_hsk_service.seed_initial_batch.assert_not_called()
+    mock_hsk_service.seed_words.assert_called_once_with(user_id, 3)
+    assert result['due_words'] == topped_up
+    assert result['returned'] == 5
+
+
+def test_get_due_words_no_top_up_when_hsk_exhausted():
+    mock_repository = MagicMock()
+    mock_hsk_service = MagicMock()
+    mock_hsk_service.seed_words.return_value = 0
+
+    mock_repository.get_due_words.return_value = []
+
+    service = VocabularyService(vocabulary_repository=mock_repository, hsk_service=mock_hsk_service)
+    result = service.get_due_words(user_id)
+
+    mock_hsk_service.seed_words.assert_called_once_with(user_id, 5)
     assert result['due_words'] == []
     assert result['returned'] == 0
 

@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 
 MAX_HSK_LEVEL = 7
 PROMOTION_THRESHOLD = 0.8
+SEED_BATCH_SIZE = 20
 
 
 class HskService:
@@ -35,7 +36,7 @@ class HskService:
         vocabulary = self.vocabulary_repository.get_vocabulary(user_id)
         return [w for w in hsk_words if w not in vocabulary]
 
-    def seed_next_batch(self, user_id: str, level: int, batch_size: int = 20) -> int:
+    def seed_next_batch(self, user_id: str, level: int, batch_size: int = SEED_BATCH_SIZE) -> int:
         unseeded = self.get_unseeded_words(user_id, level)
         batch = unseeded[:batch_size]
         if not batch:
@@ -68,10 +69,10 @@ class HskService:
             'new': new,
         }
 
-    def seed_initial_batch(self, user_id: str) -> int:
+    def seed_words(self, user_id: str, count: int) -> int:
         settings = self.settings_repository.get_settings(user_id)
         level = settings.get('hsk_level', 1)
-        return self.seed_next_batch(user_id, level)
+        return self.seed_next_batch(user_id, level, batch_size=count)
 
     def check_and_promote(self, user_id: str) -> bool:
         logger.info("check_and_promote: fetching settings for user %s", user_id)
