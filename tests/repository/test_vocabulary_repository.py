@@ -19,7 +19,6 @@ def mock_s3_client():
 @pytest.fixture
 def repo_env(monkeypatch):
     monkeypatch.setenv("S3_BUCKET", "my-test-bucket")
-    monkeypatch.setenv("S3_FILE_PATH", "vocab.json")
 
 
 @pytest.fixture
