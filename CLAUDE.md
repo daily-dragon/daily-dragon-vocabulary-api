@@ -67,6 +67,8 @@ hsk/code/         — parse_hsk_pdfs.py: extracts words and regenerates JSONs
 hsk/json/         — hsk1.json … hsk7.json (committed, deployed to S3)
 ```
 
+Word counts per level (hardcoded in `HSK_LEVEL_WORD_COUNT` in `hsk_service.py`): 1→300, 2→197, 3→493, 4→990, 5→1579, 6→1777, 7→5562.
+
 Each JSON contains only the words **unique to that level** (deduplicated across levels). To regenerate JSONs after updating PDFs:
 ```bash
 pip install pdfplumber
