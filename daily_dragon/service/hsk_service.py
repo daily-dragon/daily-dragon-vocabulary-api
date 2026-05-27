@@ -69,28 +69,35 @@ class HskService:
         }
 
     def check_and_promote(self, user_id: str) -> bool:
+        logger.info("check_and_promote: fetching settings for user %s", user_id)
         settings = self.settings_repository.get_settings(user_id)
+        logger.info("check_and_promote: settings=%s", settings)
         current_level = settings.get('hsk_level', 1)
         if 'hsk_level' not in settings:
             settings['hsk_level'] = current_level
             self.settings_repository.save_settings(user_id, settings)
 
         if current_level >= MAX_HSK_LEVEL:
-            logger.info("User %s is already at max HSK level %d", user_id, current_level)
+            logger.info("check_and_promote: user %s is already at max HSK level %d", user_id, current_level)
             return False
 
+        logger.info("check_and_promote: fetching level %d progress for user %s", current_level, user_id)
         progress = self.get_level_progress(user_id, current_level)
         total = progress['total']
+        logger.info("check_and_promote: progress=%s", progress)
         if total == 0:
             return False
 
         mastery_ratio = progress['mastered'] / total
+        logger.info("check_and_promote: mastery_ratio=%.2f for user %s level %d", mastery_ratio, user_id, current_level)
         if mastery_ratio < PROMOTION_THRESHOLD:
             return False
 
         new_level = current_level + 1
+        logger.info("check_and_promote: promoting user %s from level %d to %d", user_id, current_level, new_level)
         settings['hsk_level'] = new_level
         self.settings_repository.save_settings(user_id, settings)
+        logger.info("check_and_promote: seeding next batch for user %s at level %d", user_id, new_level)
         self.seed_next_batch(user_id, new_level)
         logger.info("Promoted user %s to HSK level %d", user_id, new_level)
         return True

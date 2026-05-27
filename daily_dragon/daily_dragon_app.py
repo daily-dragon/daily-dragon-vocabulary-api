@@ -17,6 +17,7 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S'
 )
+logger = logging.getLogger(__name__)
 
 load_dotenv()
 
@@ -169,7 +170,10 @@ def submit_reviews(request: BatchReviewRequest,
     - 10: Perfect recall
     """
     user_id = auth.sub
+    logger.info("submit_reviews: processing %d reviews for user %s", len(request.reviews), user_id)
     reviews = [{'word': r.word, 'quality': r.quality} for r in request.reviews]
     result = vocabulary_service.record_reviews(user_id, reviews)
+    logger.info("submit_reviews: record_reviews complete, calling check_and_promote")
     hsk_service.check_and_promote(user_id)
+    logger.info("submit_reviews: complete")
     return result
