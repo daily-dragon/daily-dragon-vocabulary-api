@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import MagicMock
 
-from daily_dragon.service.hsk_service import HskService, MAX_HSK_LEVEL
+from daily_dragon.service.hsk_service import HskService, MAX_HSK_LEVEL, HSK_LEVEL_WORD_COUNT
 from daily_dragon.service.spaced_repetition import SpacedRepetitionService
 
 USER_ID = "test-user"
@@ -140,7 +140,7 @@ class TestGetLevelProgress:
         result = service.get_level_progress(USER_ID, 1)
 
         assert result['level'] == 1
-        assert result['total'] == 4
+        assert result['total'] == HSK_LEVEL_WORD_COUNT[1]
         assert result['mastered'] == 2
         assert result['in_progress'] == 1
         assert result['new'] == 1
@@ -150,7 +150,7 @@ class TestGetLevelProgress:
 
         result = service.get_level_progress(USER_ID, 1)
 
-        assert result == {'level': 1, 'total': 0, 'mastered': 0, 'in_progress': 0, 'new': 0}
+        assert result == {'level': 1, 'total': HSK_LEVEL_WORD_COUNT[1], 'mastered': 0, 'in_progress': 0, 'new': 0}
 
     def test_ignores_words_without_hsk_level(self, service, mock_vocab_repo):
         meta_no_level = {'created_on': 1000, 'interval': 30, 'repetition': 5,
@@ -159,16 +159,17 @@ class TestGetLevelProgress:
 
         result = service.get_level_progress(USER_ID, 1)
 
-        assert result['total'] == 0
+        assert result['total'] == HSK_LEVEL_WORD_COUNT[1]
 
 
 class TestCheckAndPromote:
     def test_promotes_when_80_percent_mastered(self, service, mock_vocab_repo, mock_settings_repo, mock_hsk_repo):
         mock_settings_repo.get_settings.return_value = {'hsk_level': 1, 'placement_completed': True}
+        total = HSK_LEVEL_WORD_COUNT[1]
+        mastered_count = int(total * 0.8)  # exactly 80%
         mock_vocab_repo.get_vocabulary.return_value = {
-            **{str(i): _word_meta(MASTERY_INTERVAL) for i in range(8)},   # 8 mastered
-            "未掌握": _word_meta(5),                                         # 1 in_progress
-            "新词": _word_meta(0),                                           # 1 new — 80% exactly
+            **{f"mastered_{i}": _word_meta(MASTERY_INTERVAL) for i in range(mastered_count)},
+            **{f"not_mastered_{i}": _word_meta(5) for i in range(total - mastered_count)},
         }
         mock_hsk_repo.get_hsk_words.return_value = []
 
@@ -222,8 +223,11 @@ class TestCheckAndPromote:
 
     def test_seeds_first_batch_of_new_level_on_promotion(self, service, mock_vocab_repo, mock_settings_repo, mock_hsk_repo):
         mock_settings_repo.get_settings.return_value = {'hsk_level': 1, 'placement_completed': True}
+        total = HSK_LEVEL_WORD_COUNT[1]
+        mastered_count = int(total * 0.8)
         mock_vocab_repo.get_vocabulary.return_value = {
-            "一": _word_meta(MASTERY_INTERVAL),
+            **{f"mastered_{i}": _word_meta(MASTERY_INTERVAL) for i in range(mastered_count)},
+            **{f"not_mastered_{i}": _word_meta(5) for i in range(total - mastered_count)},
         }
         mock_hsk_repo.get_hsk_words.return_value = ["新1", "新2"]
 

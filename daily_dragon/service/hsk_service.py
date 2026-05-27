@@ -15,6 +15,8 @@ MAX_HSK_LEVEL = 7
 PROMOTION_THRESHOLD = 0.8
 SEED_BATCH_SIZE = 20
 
+HSK_LEVEL_WORD_COUNT = {1: 300, 2: 197, 3: 493, 4: 990, 5: 1579, 6: 1777, 7: 5562}
+
 
 class HskService:
 
@@ -63,7 +65,7 @@ class HskService:
 
         return {
             'level': level,
-            'total': len(level_words),
+            'total': HSK_LEVEL_WORD_COUNT.get(level, len(level_words)),
             'mastered': mastered,
             'in_progress': in_progress,
             'new': new,
