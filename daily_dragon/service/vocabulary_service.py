@@ -56,6 +56,9 @@ class VocabularyService:
             'returned': len(due_words)
         }
 
+    def get_trouble_words(self, user_id: str, limit: int = 10) -> List[Dict]:
+        return self.vocabulary_repository.get_trouble_words(user_id, limit)
+
     def record_reviews(self, user_id: str, reviews: List[Dict[str, Any]]) -> Dict[str, Any]:
         """
         Record batch reviews for multiple words and update their spaced repetition schedules.
@@ -101,6 +104,9 @@ class VocabularyService:
                 )
 
                 vocabulary[word].update(updated_metadata)
+
+                if quality < 5:
+                    vocabulary[word]['failure_count'] = vocabulary[word].get('failure_count', 0) + 1
 
                 results.append({
                     'word': word,

@@ -53,6 +53,7 @@ class VocabularyRepository:
         result.setdefault('ease_factor', SpacedRepetitionService.INITIAL_EASE_FACTOR)
         result.setdefault('next_review_date', None)
         result.setdefault('last_review_date', None)
+        result.setdefault('failure_count', 0)
         return result
 
     def get_due_words(self, user_id: str, limit: int = 5) -> List[Dict]:
@@ -93,6 +94,30 @@ class VocabularyRepository:
 
         # Return top N words
         return due_words[:limit]
+
+    def get_trouble_words(self, user_id: str, limit: int = 10) -> List[Dict]:
+        """
+        Get words the user repeatedly fails, excluding mastered words.
+
+        Returns words where failure_count > 0 and interval < MASTERY_INTERVAL,
+        sorted by failure_count descending.
+        """
+        vocabulary = self.get_vocabulary(user_id)
+
+        trouble_words = [
+            {
+                'word': word,
+                'failure_count': metadata.get('failure_count', 0),
+                'interval': metadata.get('interval', 0),
+                'ease_factor': metadata.get('ease_factor', SpacedRepetitionService.INITIAL_EASE_FACTOR)
+            }
+            for word, metadata in vocabulary.items()
+            if metadata.get('failure_count', 0) > 0
+            and metadata.get('interval', 0) < SpacedRepetitionService.MASTERY_INTERVAL
+        ]
+
+        trouble_words.sort(key=lambda x: x['failure_count'], reverse=True)
+        return trouble_words[:limit]
 
     def add_word(self, user_id: str, word: str) -> None:
         vocabulary = self.get_vocabulary(user_id)
