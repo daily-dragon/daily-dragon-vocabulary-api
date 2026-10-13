@@ -61,6 +61,17 @@ class BatchReviewRequest(BaseModel):
     reviews: List[Review] = Field(..., min_length=1, description="List of word reviews")
 
 
+class TroubleWord(BaseModel):
+    word: str
+    failure_count: int
+    interval: int
+    ease_factor: float
+
+
+class TroubleWordsResponse(BaseModel):
+    words: List[TroubleWord]
+
+
 class LevelProgress(BaseModel):
     level: int
     total: int
@@ -148,6 +159,21 @@ def get_due_words(vocabulary_service: VocabularyService = Depends(),
     """
     user_id = auth.sub
     return vocabulary_service.get_due_words(user_id)
+
+
+@app.get("/daily-dragon/vocabulary/trouble-words", response_model=TroubleWordsResponse)
+def get_trouble_words(
+        limit: int = Query(default=10, gt=0, le=50),
+        vocabulary_service: VocabularyService = Depends(),
+        auth: DailyDragonCognitoToken = Depends(cognito_auth.auth_required)
+) -> TroubleWordsResponse:
+    """
+    Get the words the user has failed most, excluding mastered words (interval >= 21 days).
+    Returns up to `limit` words sorted by failure count descending.
+    """
+    user_id = auth.sub
+    words = vocabulary_service.get_trouble_words(user_id, limit)
+    return TroubleWordsResponse(words=[TroubleWord(**w) for w in words])
 
 
 @app.post("/daily-dragon/vocabulary/reviews")

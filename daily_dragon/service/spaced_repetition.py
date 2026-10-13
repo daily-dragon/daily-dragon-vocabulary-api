@@ -104,7 +104,8 @@ class SpacedRepetitionService:
             'repetition': SpacedRepetitionService.INITIAL_REPETITION,
             'ease_factor': SpacedRepetitionService.INITIAL_EASE_FACTOR,
             'next_review_date': None,
-            'last_review_date': None
+            'last_review_date': None,
+            'failure_count': 0
         }
 
     @staticmethod
