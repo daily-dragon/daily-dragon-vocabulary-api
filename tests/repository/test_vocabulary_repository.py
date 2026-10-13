@@ -153,7 +153,8 @@ def test_ensure_spaced_repetition_fields_idempotent(vocabulary_repo):
         'repetition': 2,
         'ease_factor': 2.6,
         'next_review_date': 987654321,
-        'last_review_date': 987654000
+        'last_review_date': 987654000,
+        'failure_count': 0
     }
 
     result = vocabulary_repo.ensure_spaced_repetition_fields(already_migrated.copy())
